@@ -140,3 +140,24 @@ Thumbs.db
 # Local development
 .env.local
 .env.test.local
+
+# Android/Gradle
+android/.gradle/
+android/local.properties
+android/build/
+android/.idea/
+android/*.iml
+android/.DS_Store
+android/.classpath
+android/.project
+android/.settings/
+android/gen/
+android/bin/
+android/proguard-mapping.txt
+android/.navigation
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+android/lint-results*.xml
+android/*.apk
+android/*.aar

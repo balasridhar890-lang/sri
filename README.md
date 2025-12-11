@@ -1,9 +1,14 @@
-# Backend Service - FastAPI with OpenAI Integration
+# Voice Assistant - Complete System (Backend + Android)
 
-A Python FastAPI backend service with OpenAI GPT integration, SQLModel-based database persistence, and comprehensive conversation/SMS handling capabilities.
+A complete voice assistant system consisting of:
+- **Backend**: Python FastAPI service with OpenAI GPT integration, SMS/call decision making, and history tracking
+- **Android**: Kotlin mobile app with phone state management, auto-answer calls, intelligent SMS auto-reply, and backend synchronization
+
+This is a full-stack implementation of AI-powered phone integration for both incoming calls and SMS messages.
 
 ## Features
 
+### Backend (FastAPI)
 - **FastAPI Framework**: Modern async Python web framework with automatic OpenAPI documentation
 - **OpenAI Integration**: Robust GPT-3.5-turbo integration with error handling, retries, and timeouts
 - **SQLModel Database**: SQLAlchemy ORM with Pydantic validation, async support, and migration-ready
@@ -11,16 +16,27 @@ A Python FastAPI backend service with OpenAI GPT integration, SQLModel-based dat
 - **SMS Decision Endpoint**: Make yes/no decisions and generate replies for SMS messages
 - **User Management**: Create, read, update, delete users with preferences
 - **History Tracking**: Complete conversation, call, and SMS logs for audit trails
-- **Dependency Injection**: Clean service architecture with mockable dependencies
 - **Async/Await**: Non-blocking I/O for sub-2-second response times
 - **Comprehensive Testing**: Unit tests for schemas, repositories, services, and endpoints
 - **Production Ready**: CORS, error handling, logging, and security headers
+
+### Android (Kotlin)
+- **Phone State Management**: Monitor and intercept incoming/outgoing calls
+- **Auto-Answer**: Automatically answer incoming calls and hand to voice assistant
+- **Call Logging**: Local and remote logging of all call events
+- **SMS Auto-Reply**: Intelligent workflow requesting backend decision and sending replies
+- **SMS Logging**: Track all SMS events locally and sync with backend
+- **Device Monitoring**: Monitor battery %, running apps, and contacts
+- **Permission Management**: Comprehensive permission request flows with fallbacks
+- **Local Storage**: Room database for offline call and SMS logs
+- **Sync Service**: Periodic synchronization with backend
+- **Hilt Dependency Injection**: Clean, testable architecture
 
 ## Project Structure
 
 ```
 .
-├── app/
+├── app/                        # Backend (FastAPI)
 │   ├── __init__.py
 │   ├── main.py                 # FastAPI app initialization
 │   ├── config.py              # Configuration and settings
@@ -38,7 +54,27 @@ A Python FastAPI backend service with OpenAI GPT integration, SQLModel-based dat
 │       ├── conversation.py    # Conversation processing
 │       ├── sms.py            # SMS decision making
 │       └── history.py        # Conversation/call/SMS history
-├── tests/
+├── android/                    # Mobile App (Kotlin/Android)
+│   ├── build.gradle.kts       # Android build configuration
+│   ├── settings.gradle.kts    # Gradle settings
+│   ├── proguard-rules.pro     # Proguard configuration
+│   ├── src/main/
+│   │   ├── AndroidManifest.xml
+│   │   └── java/com/voiceassistant/android/
+│   │       ├── MainActivity.kt              # Main entry point
+│   │       ├── VoiceAssistantApp.kt         # Hilt application
+│   │       ├── config/AppConfig.kt          # Configuration
+│   │       ├── database/AppDatabase.kt      # Room database
+│   │       ├── di/NetworkModule.kt          # Hilt modules
+│   │       ├── network/BackendClient.kt     # API client
+│   │       ├── permissions/PermissionManager.kt
+│   │       └── services/
+│   │           ├── device/DeviceInfoMonitor.kt
+│   │           ├── phone/*.kt              # Call handling
+│   │           ├── sms/*.kt                # SMS handling
+│   │           └── sync/SyncService.kt     # Backend sync
+│   └── README.md               # Android documentation
+├── tests/                      # Backend tests
 │   ├── __init__.py
 │   ├── conftest.py           # Pytest configuration
 │   ├── test_schemas.py       # Schema validation tests
@@ -48,22 +84,27 @@ A Python FastAPI backend service with OpenAI GPT integration, SQLModel-based dat
 ├── .env.template              # Environment variables template
 ├── pyproject.toml            # Project dependencies
 ├── README.md                 # This file
+├── ANDROID_INTEGRATION.md    # Android setup & integration guide
 └── .gitignore               # Git ignore rules
 ```
 
 ## Installation
 
-### Prerequisites
-
+### Backend Prerequisites
 - Python 3.9+
 - pip or uv
 
-### Setup
+### Android Prerequisites
+- Android Studio 2023.1+
+- Android SDK 26+ (Kotlin 1.9.10)
+- Physical Android device or emulator
+
+### Backend Setup
 
 1. **Clone the repository**
 ```bash
 git clone <repository-url>
-cd backend-service
+cd voice-assistant
 ```
 
 2. **Create virtual environment**
@@ -80,13 +121,37 @@ pip install -e ".[dev]"
 4. **Configure environment**
 ```bash
 cp .env.template .env
-# Edit .env with your settings
+# Edit .env with your settings (especially OPENAI_API_KEY)
 ```
 
-5. **Initialize database**
+5. **Start backend server**
 ```bash
-python -m app.main  # Will auto-initialize on startup
+python -m app.main
+# Server will be at http://localhost:8000
+# API docs at http://localhost:8000/docs
 ```
+
+### Android Setup
+
+1. **Open Android project in Android Studio**
+```bash
+# From project root
+open android/
+```
+
+2. **Sync Gradle**
+   - Android Studio will automatically sync dependencies
+
+3. **Configure backend URL**
+   - Edit `android/src/main/java/com/voiceassistant/android/MainActivity.kt`
+   - Set `appConfig.backendUrl` to your backend URL (e.g., `http://192.168.1.100:8000`)
+
+4. **Build and run**
+```bash
+./gradlew installDebug
+```
+
+For detailed Android setup and configuration, see [ANDROID_INTEGRATION.md](ANDROID_INTEGRATION.md)
 
 ## Environment Configuration
 
@@ -451,9 +516,47 @@ Automatic interactive docs available at:
 
 MIT License - See LICENSE file for details
 
+## Android Integration Guide
+
+For comprehensive Android setup, configuration, and troubleshooting, see **[ANDROID_INTEGRATION.md](ANDROID_INTEGRATION.md)**.
+
+### Quick Start
+1. Start backend: `python -m app.main`
+2. Get your machine IP: `ifconfig | grep "inet "`
+3. Update Android `AppConfig.backendUrl` with your IP
+4. Build and run: `./gradlew installDebug`
+
+### Key Features
+- **Auto-Answer Calls**: Calls are automatically answered via TelecomManager
+- **SMS Auto-Reply**: Backend decides whether to reply, Android sends if approved
+- **Call Logging**: All calls logged locally and synced with backend
+- **SMS Logging**: All SMS tracked locally and synced to `/history` endpoint
+- **Permission Handling**: Comprehensive permission requests with fallbacks
+- **Device Monitoring**: Battery, running apps, and contacts available
+- **Offline Support**: Local Room database stores events when offline
+
+### Architecture
+```
+Incoming Call/SMS
+  ↓
+CallReceiver/SMSReceiver (BroadcastReceiver)
+  ↓
+PhoneStateManager/SMSHandler
+  ├─ Local logging (Room database)
+  ├─ Backend request (if auto-reply)
+  └─ State management
+  ↓
+SyncService (periodic sync)
+  ├─ Upload call logs
+  └─ Upload SMS logs
+  ↓
+Backend /history endpoints
+```
+
 ## Support
 
 For issues and questions:
 1. Check existing GitHub issues
-2. Create new issue with details
-3. Include error logs and reproduction steps
+2. Review [ANDROID_INTEGRATION.md](ANDROID_INTEGRATION.md) for Android issues
+3. Create new issue with details
+4. Include error logs and reproduction steps
