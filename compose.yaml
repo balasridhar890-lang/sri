@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: voice-assistant-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Application settings
+      APP_NAME: ${APP_NAME:-Backend Service}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      STRUCTURED_LOGGING: ${STRUCTURED_LOGGING:-true}
+      
+      # Server settings
+      HOST: 0.0.0.0
+      PORT: 8000
+      
+      # Database settings (PostgreSQL)
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/voiceassistant}
+      
+      # OpenAI settings
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-3.5-turbo}
+      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-500}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.7}
+      
+      # Timeout settings
+      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-30}
+      OPENAI_TIMEOUT: ${OPENAI_TIMEOUT:-20}
+      
+      # Retry settings
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      RETRY_DELAY: ${RETRY_DELAY:-1.0}
+      
+      # CORS settings
+      CORS_ORIGINS: ${CORS_ORIGINS:-["*"]}
+      CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
+      CORS_METHODS: ${CORS_METHODS:-["*"]}
+      CORS_HEADERS: ${CORS_HEADERS:-["*"]}
+      
+      # Gunicorn settings
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+    volumes:
+      - backend-data:/app/data
+      - backend-logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - voice-assistant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:15-alpine
+    container_name: voice-assistant-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-voiceassistant}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - voice-assistant-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+volumes:
+  backend-data:
+    driver: local
+  backend-logs:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  voice-assistant-network:
+    driver: bridge

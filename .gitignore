@@ -140,6 +140,12 @@ Thumbs.db
 # Local development
 .env.local
 .env.test.local
+.env.production
+
+# Docker
+data/
+logs/
+*.log
 
 # Android/Gradle
 android/.gradle/

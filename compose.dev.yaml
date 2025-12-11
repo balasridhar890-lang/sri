@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: voice-assistant-backend-dev
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Application settings
+      APP_NAME: ${APP_NAME:-Backend Service (Dev)}
+      DEBUG: ${DEBUG:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+      STRUCTURED_LOGGING: ${STRUCTURED_LOGGING:-false}
+      
+      # Server settings
+      HOST: 0.0.0.0
+      PORT: 8000
+      
+      # Database settings (SQLite)
+      DATABASE_URL: sqlite:///./data/app.db
+      
+      # OpenAI settings
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-3.5-turbo}
+      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-500}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.7}
+      
+      # Timeout settings
+      REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-30}
+      OPENAI_TIMEOUT: ${OPENAI_TIMEOUT:-20}
+      
+      # Retry settings
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      RETRY_DELAY: ${RETRY_DELAY:-1.0}
+      
+      # CORS settings
+      CORS_ORIGINS: ${CORS_ORIGINS:-["*"]}
+      CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
+      CORS_METHODS: ${CORS_METHODS:-["*"]}
+      CORS_HEADERS: ${CORS_HEADERS:-["*"]}
+      
+      # Gunicorn settings
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./app:/app/app:ro
+    networks:
+      - voice-assistant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  voice-assistant-network:
+    driver: bridge
