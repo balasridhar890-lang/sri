@@ -2,6 +2,8 @@ package com.voiceassistant.android.network
 
 import android.util.Log
 import com.voiceassistant.android.config.AppConfig
+import com.voiceassistant.android.repository.PreferencesSyncRequest
+import com.voiceassistant.android.repository.PreferencesSyncResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -43,6 +45,16 @@ interface BackendApi {
     suspend fun getSMSHistory(
         @Path("user_id") userId: Int
     ): List<SMSLogResponse>
+    
+    @POST("/preferences/sync")
+    suspend fun syncPreferences(
+        @Body request: PreferencesSyncRequest
+    ): PreferencesSyncResponse
+    
+    @GET("/preferences/{user_id}")
+    suspend fun getPreferences(
+        @Path("user_id") userId: Int
+    ): Map<String, Any>
 }
 
 /**
@@ -137,6 +149,22 @@ data class SMSLogResponse(
 )
 
 /**
+ * API request/response models for preferences
+ */
+@Serializable
+data class PreferencesSyncRequest(
+    val userId: Int,
+    val preferences: Map<String, Any>
+)
+
+@Serializable
+data class PreferencesSyncResponse(
+    val success: Boolean,
+    val message: String? = null,
+    val preferences: Map<String, Any>? = null
+)
+
+/**
  * Backend client for API communication
  */
 @Singleton
@@ -218,6 +246,32 @@ class BackendClient @Inject constructor(private val config: AppConfig) {
                 api.getSMSHistory(userId)
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching SMS history", e)
+                throw e
+            }
+        }
+    }
+    
+    suspend fun syncPreferences(request: PreferencesSyncRequest): PreferencesSyncResponse {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "Syncing preferences for user ${request.userId}")
+                api.syncPreferences(request).also {
+                    Log.d(TAG, "Preferences sync completed: ${it.success}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error syncing preferences", e)
+                throw e
+            }
+        }
+    }
+    
+    suspend fun getPreferences(userId: Int): Map<String, Any> {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "Fetching preferences for user $userId")
+                api.getPreferences(userId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching preferences", e)
                 throw e
             }
         }

@@ -6,24 +6,35 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.lifecycleScope
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.voiceassistant.android.ui.theme.AppTheme
+import com.voiceassistant.android.ui.AppNavigation
 import com.voiceassistant.android.config.AppConfig
 import com.voiceassistant.android.permissions.PermissionManager
 import com.voiceassistant.android.services.phone.PhoneStateService
 import com.voiceassistant.android.services.sync.SyncService
+import com.voiceassistant.android.viewmodel.MainActivityViewModel
+import com.voiceassistant.android.viewmodel.MainActivityState
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Main activity with permission handling and service initialization
+ * Main activity with Compose UI and permission handling
  */
 @AndroidEntryPoint
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
@@ -34,9 +45,6 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var appConfig: AppConfig
     
-    private var permissionRequestCount = 0
-    private var deniedPermissions = mutableSetOf<String>()
-    
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
@@ -44,16 +52,12 @@ class MainActivity : AppCompatActivity() {
         
         val deniedList = result.filter { !it.value }.keys
         if (deniedList.isNotEmpty()) {
-            deniedPermissions.addAll(deniedList)
             Log.w(TAG, "Permissions denied: $deniedList")
-            
-            // Show fallback message
-            showPermissionDeniedFallback(deniedList.toList())
+            // Handle denied permissions
         } else {
-            deniedPermissions.clear()
             Log.d(TAG, "All permissions granted")
             Toast.makeText(this, "All permissions granted!", Toast.LENGTH_SHORT).show()
-            startServices()
+            // Start services after permissions granted
         }
     }
     
@@ -65,187 +69,145 @@ class MainActivity : AppCompatActivity() {
         
         Log.d(TAG, "MainActivity created")
         
-        // Check and request permissions
-        checkAndRequestPermissions()
+        setContent {
+            AppTheme {
+                val viewModel: MainActivityViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                
+                MainActivityContent(
+                    uiState = uiState,
+                    onCheckPermissions = viewModel::checkPermissions,
+                    onRequestPermissions = viewModel::requestPermissions,
+                    onStartServices = viewModel::startServices,
+                    onDismissPermissionDialog = viewModel::dismissPermissionDialog,
+                    permissionLauncher = permissionLauncher
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MainActivityContent(
+    uiState: MainActivityState,
+    onCheckPermissions: () -> Unit,
+    onRequestPermissions: (Array<String>) -> Unit,
+    onStartServices: () -> Unit,
+    onDismissPermissionDialog: () -> Unit,
+    permissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>
+) {
+    // Check permissions on start
+    LaunchedEffect(Unit) {
+        onCheckPermissions()
     }
     
-    override fun onResume() {
-        super.onResume()
-        
-        // Check critical permissions are still granted
-        if (!permissionManager.hasCriticalPermissions()) {
-            Log.w(TAG, "Critical permissions lost, re-requesting")
-            checkAndRequestPermissions()
+    // Handle permission request
+    LaunchedEffect(uiState.permissionRequestPending) {
+        if (uiState.permissionRequestPending) {
+            val permissions = uiState.missingPermissions
+            if (permissions.isNotEmpty()) {
+                permissionLauncher.launch(permissions)
+            }
+            onDismissPermissionDialog()
         }
     }
     
-    private fun checkAndRequestPermissions() {
-        Log.d(TAG, "Checking permissions")
-        
-        val missingPermissions = permissionManager.getMissingPermissions(
-            PermissionManager.ALL_REQUIRED_PERMISSIONS
-        )
-        
-        if (missingPermissions.isEmpty()) {
-            Log.d(TAG, "All permissions already granted")
-            startServices()
-            return
-        }
-        
-        Log.d(TAG, "Missing permissions: ${missingPermissions.toList()}")
-        
-        // Show explanation dialog before requesting
-        if (permissionRequestCount == 0) {
-            showPermissionExplanationDialog(missingPermissions)
-        } else {
-            requestPermissions(missingPermissions)
-        }
-        
-        permissionRequestCount++
-    }
-    
-    private fun showPermissionExplanationDialog(permissions: Array<String>) {
-        AlertDialog.Builder(this)
-            .setTitle("App Permissions Required")
-            .setMessage(buildPermissionMessage(permissions))
-            .setPositiveButton("Grant") { _, _ ->
-                requestPermissions(permissions)
-            }
-            .setNegativeButton("Cancel") { _, _ ->
-                showFallbackOptions()
-            }
-            .setCancelable(false)
-            .show()
-    }
-    
-    private fun requestPermissions(permissions: Array<String>) {
-        Log.d(TAG, "Requesting permissions: ${permissions.toList()}")
-        
-        val toRequest = permissions.filter {
-            permissionManager.shouldRequestPermission(this, it)
-        }.toTypedArray()
-        
-        if (toRequest.isNotEmpty()) {
-            permissionLauncher.launch(toRequest)
-        } else {
-            startServices()
+    // Start services when ready
+    LaunchedEffect(uiState.permissionsGranted, uiState.servicesStarted) {
+        if (uiState.permissionsGranted && !uiState.servicesStarted) {
+            onStartServices()
         }
     }
     
-    private fun showPermissionDeniedFallback(deniedPermissions: List<String>) {
-        AlertDialog.Builder(this)
-            .setTitle("Permissions Denied")
-            .setMessage(buildDeniedMessage(deniedPermissions))
-            .setPositiveButton("Continue Anyway") { _, _ ->
-                // Proceed with limited functionality
-                startServicesWithFallback()
-            }
-            .setNegativeButton("Quit") { _, _ ->
-                finish()
-            }
-            .setCancelable(false)
-            .show()
-    }
-    
-    private fun showFallbackOptions() {
-        AlertDialog.Builder(this)
-            .setTitle("Limited Functionality")
-            .setMessage(
-                "Without required permissions, the app will have limited functionality. " +
-                "Continue with fallback mode?"
+    when {
+        uiState.showPermissionDialog -> {
+            PermissionRequestDialog(
+                missingPermissions = uiState.missingPermissions,
+                onGrantPermissions = { onRequestPermissions(uiState.missingPermissions) },
+                onDismiss = onDismissPermissionDialog
             )
-            .setPositiveButton("Continue") { _, _ ->
-                startServicesWithFallback()
-            }
-            .setNegativeButton("Exit") { _, _ ->
-                finish()
-            }
-            .setCancelable(false)
-            .show()
-    }
-    
-    private fun startServices() {
-        Log.d(TAG, "Starting services")
-        
-        // Start phone state monitoring service
-        val phoneStateIntent = Intent(this, PhoneStateService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(phoneStateIntent)
-        } else {
-            startService(phoneStateIntent)
         }
         
-        // Start sync service
-        val syncIntent = Intent(this, SyncService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(syncIntent)
-        } else {
-            startService(syncIntent)
+        uiState.servicesStarted -> {
+            // Main app navigation
+            AppNavigation()
         }
         
-        Toast.makeText(this, "Services started", Toast.LENGTH_SHORT).show()
-    }
-    
-    private fun startServicesWithFallback() {
-        Log.d(TAG, "Starting services with fallback")
-        
-        // Only start services for which we have required permissions
-        if (permissionManager.hasCallPermissions()) {
-            val phoneStateIntent = Intent(this, PhoneStateService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(phoneStateIntent)
-            } else {
-                startService(phoneStateIntent)
-            }
-        }
-        
-        Toast.makeText(
-            this,
-            "Services started with limited functionality",
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-    
-    private fun buildPermissionMessage(permissions: Array<String>): String {
-        val messages = mutableListOf<String>()
-        
-        if (permissions.contains(Manifest.permission.READ_PHONE_STATE)) {
-            messages.add("• Phone State: To monitor calls and auto-answer")
-        }
-        if (permissions.contains(Manifest.permission.RECEIVE_SMS)) {
-            messages.add("• SMS: To receive and auto-reply to messages")
-        }
-        if (permissions.contains(Manifest.permission.READ_CONTACTS)) {
-            messages.add("• Contacts: To access your contact list")
-        }
-        if (permissions.contains(Manifest.permission.READ_EXTERNAL_STORAGE)) {
-            messages.add("• Storage: To log and store history")
-        }
-        
-        return messages.joinToString("\n")
-    }
-    
-    private fun buildDeniedMessage(deniedPermissions: List<String>): String {
-        val messages = mutableListOf<String>()
-        
-        deniedPermissions.forEach { permission ->
-            when (permission) {
-                Manifest.permission.READ_PHONE_STATE -> {
-                    messages.add("• Phone State (Call monitoring disabled)")
-                }
-                Manifest.permission.RECEIVE_SMS -> {
-                    messages.add("• SMS (Auto-reply disabled)")
-                }
-                Manifest.permission.READ_CONTACTS -> {
-                    messages.add("• Contacts (Limited access)")
-                }
-                Manifest.permission.READ_EXTERNAL_STORAGE -> {
-                    messages.add("• Storage (History logging limited)")
+        uiState.isInitializing -> {
+            // Show loading state
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Text(
+                        text = "Initializing Voice Assistant...",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
         }
         
-        return "The following permissions were denied:\n\n${messages.joinToString("\n")}\n\n" +
-                "You can still use the app with limited functionality."
+        else -> {
+            // Default state
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Loading...",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
     }
+}
+
+@Composable
+fun PermissionRequestDialog(
+    missingPermissions: Array<String>,
+    onGrantPermissions: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Permissions Required")
+        },
+        text = {
+            Column {
+                Text("To provide the best experience, this app needs the following permissions:")
+                Spacer(modifier = Modifier.height(8.dp))
+                missingPermissions.forEach { permission ->
+                    val description = when (permission) {
+                        Manifest.permission.READ_PHONE_STATE -> "• Monitor calls and auto-answer"
+                        Manifest.permission.RECEIVE_SMS -> "• Receive and auto-reply to messages"
+                        Manifest.permission.READ_CONTACTS -> "• Access your contact list"
+                        Manifest.permission.READ_EXTERNAL_STORAGE -> "• Log and store history"
+                        Manifest.permission.CALL_PHONE -> "• Make phone calls"
+                        Manifest.permission.SEND_SMS -> "• Send SMS messages"
+                        else -> "• $permission"
+                    }
+                    Text(text = description)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onGrantPermissions) {
+                Text("Grant Permissions")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
