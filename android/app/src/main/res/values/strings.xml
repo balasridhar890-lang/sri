@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoiceCore</string>
+    
+    <!-- Main Activity -->
+    <string name="main_activity_title">VoiceCore Assistant</string>
+    <string name="settings">Settings</string>
+    
+    <!-- Permissions -->
+    <string name="permission_mic_title">Microphone Access</string>
+    <string name="permission_mic_description">Required for voice input and wake word detection</string>
+    <string name="permission_mic_grant">Grant</string>
+    <string name="permission_mic_granted">Granted</string>
+    
+    <string name="permission_phone_title">Phone Access</string>
+    <string name="permission_phone_description">Required for automatic call answering</string>
+    
+    <string name="permission_phone_state_title">Phone State</string>
+    <string name="permission_phone_state_description">Required to detect incoming calls</string>
+    
+    <string name="permission_notifications_title">Notifications</string>
+    <string name="permission_notifications_description">Required for service status and alerts</string>
+    
+    <string name="permission_overlay_title">System Overlays</string>
+    <string name="permission_overlay_description">Required for call screen integration</string>
+    
+    <!-- Service Status -->
+    <string name="voice_assistant">Voice Assistant</string>
+    <string name="service_ready">Ready to start</string>
+    <string name="service_initializing">Initializing services...</string>
+    <string name="service_listening">Listening for "Hey Jarvis"</string>
+    <string name="service_processing">Processing your request...</string>
+    <string name="service_speaking">Speaking response...</string>
+    <string name="service_call_managing">Managing call...</string>
+    <string name="service_error">Error occurred</string>
+    
+    <!-- Status Indicators -->
+    <string name="status_listening">Listening</string>
+    <string name="status_silent">Silent</string>
+    <string name="status_battery_opt">Battery Opt</string>
+    <string name="status_service">Service</string>
+    
+    <!-- Actions -->
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_grant">Grant</string>
+    
+    <!-- Voice Processing -->
+    <string name="voice_input_current">Current Input:</string>
+    <string name="voice_input_listening">Listening...</string>
+    <string name="voice_input_processing">Processing speech...</string>
+    
+    <!-- Error Messages -->
+    <string name="error_speech_recognition">Speech recognition error</string>
+    <string name="error_tts">Text-to-speech error</string>
+    <string name="error_network">Network error</string>
+    <string name="error_permission_denied">Permission denied</string>
+    <string name="error_service_start">Failed to start voice service</string>
+    <string name="error_battery_optimization">Battery optimization blocking service</string>
+    
+    <!-- Call Management -->
+    <string name="call_answering">Call Answering</string>
+    <string name="call_screening">Call Screening</string>
+    <string name="call_status_incoming">Incoming Call</string>
+    <string name="call_status_answered">Answered</string>
+    <string name="call_status_missed">Missed</string>
+    <string name="call_status_rejected">Rejected</string>
+    
+    <!-- Notifications -->
+    <string name="notification_voice_service_title">VoiceCore Assistant</string>
+    <string name="notification_voice_service_text">Listening for "Hey Jarvis"</string>
+    <string name="notification_voice_service_channel">Voice Service</string>
+    <string name="notification_voice_service_channel_description">Background voice processing and wake word detection</string>
+    
+    <string name="notification_call_service_channel">Call Management</string>
+    <string name="notification_call_service_channel_description">Automatic call answering and management</string>
+    
+    <string name="notification_system_alerts_channel">System Alerts</string>
+    <string name="notification_system_alerts_channel_description">Important system notifications and alerts</string>
+    
+    <!-- Wake Word -->
+    <string name="wake_word_hey_jarvis">Hey Jarvis</string>
+    <string name="wake_word_detected">Wake word detected</string>
+    
+    <!-- Recent Activity -->
+    <string name="recent_activity">Recent Activity</string>
+    <string name="conversation_user">User: %1$s</string>
+    <string name="conversation_assistant">Assistant: %1$s</string>
+    
+    <!-- Backend API -->
+    <string name="backend_api_error">Backend API error</string>
+    <string name="backend_connection_failed">Failed to connect to backend</string>
+    
+    <!-- Misc -->
+    <string name="loading">Loading...</string>
+    <string name="unknown_error">Unknown error occurred</string>
+    <string name="retry">Retry</string>
+    <string name="dismiss">Dismiss</string>
+</resources>
