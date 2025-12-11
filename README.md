@@ -6,6 +6,17 @@ A complete voice assistant system consisting of:
 
 This is a full-stack implementation of AI-powered phone integration for both incoming calls and SMS messages.
 
+## Quick Start
+
+**Want to deploy quickly?** See [DEPLOYMENT_QUICKSTART.md](DEPLOYMENT_QUICKSTART.md) for a 5-minute setup guide.
+
+```bash
+./scripts/quick-start.sh  # Interactive setup
+# OR
+make dev-up              # Development environment
+make up                  # Production environment
+```
+
 ## Features
 
 ### Backend (FastAPI)
@@ -81,11 +92,28 @@ This is a full-stack implementation of AI-powered phone integration for both inc
 │   ├── test_repositories.py  # Repository layer tests
 │   ├── test_services.py      # Service logic tests
 │   └── test_endpoints.py     # Endpoint integration tests
-├── .env.template              # Environment variables template
+├── scripts/                   # Deployment scripts
+│   ├── entrypoint.sh         # Docker container entrypoint
+│   ├── quick-start.sh        # Interactive setup script
+│   ├── test-docker.sh        # Docker build testing
+│   └── README.md             # Scripts documentation
+├── .github/                   # GitHub Actions
+│   └── workflows/
+│       └── backend-ci.yaml   # CI pipeline
+├── .env.template             # Environment variables template
+├── .env.production           # Production env template
+├── .dockerignore             # Docker build context
+├── Dockerfile                # Production container image
+├── compose.yaml              # Production docker-compose
+├── compose.dev.yaml          # Development docker-compose
+├── gunicorn_conf.py          # Gunicorn/Uvicorn config
+├── Makefile                  # Build and deployment commands
 ├── pyproject.toml            # Project dependencies
 ├── README.md                 # This file
+├── DEPLOYMENT.md             # Complete deployment guide
+├── DEPLOYMENT_QUICKSTART.md  # Quick deployment guide
 ├── ANDROID_INTEGRATION.md    # Android setup & integration guide
-└── .gitignore               # Git ignore rules
+└── .gitignore                # Git ignore rules
 ```
 
 ## Installation
@@ -366,13 +394,51 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 The API will be available at `http://localhost:8000`
 Documentation at `http://localhost:8000/docs`
 
-### Production
+### Production (Docker)
+
+For production deployment with Docker and PostgreSQL:
+
+```bash
+# Quick start
+make build
+make up
+
+# View logs
+make logs
+
+# Check health
+curl http://localhost:8000/health
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive deployment documentation including:
+- Docker deployment with PostgreSQL
+- Security best practices
+- Monitoring and logging setup
+- CI/CD pipeline configuration
+- Production checklist
+
+### Production (Manual)
 
 ```bash
 gunicorn app.main:app \
   --workers 4 \
   --worker-class uvicorn.workers.UvicornWorker \
   --bind 0.0.0.0:8000
+```
+
+## Deployment
+
+Complete deployment guide available in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+Quick commands:
+```bash
+make build        # Build Docker image
+make up           # Start production containers
+make dev-up       # Start development environment
+make test         # Run tests
+make lint         # Run linting
+make logs         # View logs
+make clean        # Clean up
 ```
 
 ## Testing
